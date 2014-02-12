@@ -1,4 +1,3 @@
-#import "HBBVListener.h"
 #import <BackBoardServices/BKSDisplayBrightness.h>
 #import <SpringBoard/SBBrightnessController.h>
 #import <SpringBoard/SBBrightnessHUDView.h>
@@ -6,13 +5,16 @@
 #import <SpringBoard/VolumeControl.h>
 #import <version.h>
 
-BOOL brightnessMode;
-NSTimer *timer;
 
-BOOL HBBVToggleMode() {
-	brightnessMode = !brightnessMode;
-	return brightnessMode;
-}
+@interface SBMediaController
++ (id)sharedInstance;
+- (BOOL)isRingerMuted;
+- (void)setRingerMuted:(BOOL)muted;
+@end
+
+
+
+
 
 void HBBVSetBrightness(BOOL direction, VolumeControl* volumeControl) {
 #ifdef BRIGHTVOL_LEGACY
@@ -35,18 +37,12 @@ void HBBVSetBrightness(BOOL direction, VolumeControl* volumeControl) {
 	[[%c(SBHUDController) sharedHUDController] presentHUDView:hud autoDismissWithDelay:1];
 #endif
 
-	if (timer) {
-		[timer invalidate];
-		[timer release];
-	}
-
-	timer = [[NSTimer scheduledTimerWithTimeInterval:30 target:volumeControl selector:@selector(_brightvol_timerFired) userInfo:nil repeats:NO] retain];
 }
 
 %hook VolumeControl
 
 - (void)increaseVolume {
-	if (brightnessMode) {
+	if ([[%c(SBMediaController) sharedInstance] isRingerMuted]) {
 		HBBVSetBrightness(YES, self);
 	} else {
 		%orig;
@@ -54,7 +50,7 @@ void HBBVSetBrightness(BOOL direction, VolumeControl* volumeControl) {
 }
 
 - (void)decreaseVolume {
-	if (brightnessMode) {
+	if ([[%c(SBMediaController) sharedInstance] isRingerMuted]) {
 		HBBVSetBrightness(NO, self);
 	} else {
 		%orig;
@@ -67,7 +63,7 @@ void HBBVSetBrightness(BOOL direction, VolumeControl* volumeControl) {
 */
 
 - (void)_changeVolumeBy:(CGFloat)by {
-	if (brightnessMode) {
+	if ([[%c(SBMediaController) sharedInstance] isRingerMuted]) {
 		if (by > 0) {
 			[self increaseVolume];
 		} else {
@@ -78,19 +74,5 @@ void HBBVSetBrightness(BOOL direction, VolumeControl* volumeControl) {
 	}
 }
 
-%new - (void)_brightvol_timerFired {
-	brightnessMode = NO;
-
-	[timer release];
-	timer = nil;
-}
 
 %end
-
-%ctor {
-	if (![[LAActivator sharedInstance] hasSeenListenerWithName:@"ws.hbang.brightvol"]) {
-		[[LAActivator sharedInstance] assignEvent:[LAEvent eventWithName:@"libactivator.volume.both.press"] toListenerWithName:@"ws.hbang.brightvol"];
-	}
-
-	[[LAActivator sharedInstance] registerListener:[[HBBVListener alloc] init] forName:@"ws.hbang.brightvol"];
-}
