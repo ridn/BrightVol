@@ -10,8 +10,14 @@
 + (id)sharedInstance;
 - (BOOL)isRingerMuted;
 - (void)setRingerMuted:(BOOL)muted;
+- (BOOL)isPlaying;
 @end
 
+BOOL isBrightnessMode () {
+	if([[%c(SBMediaController) sharedInstance] isRingerMuted] && [[%c(SBMediaController) sharedInstance] isPlaying])
+		return YES;
+	return NO;
+}
 
 
 
@@ -42,7 +48,7 @@ void HBBVSetBrightness(BOOL direction, VolumeControl* volumeControl) {
 %hook VolumeControl
 
 - (void)increaseVolume {
-	if ([[%c(SBMediaController) sharedInstance] isRingerMuted]) {
+	if (isBrightnessMode()) {
 		HBBVSetBrightness(YES, self);
 	} else {
 		%orig;
@@ -50,7 +56,7 @@ void HBBVSetBrightness(BOOL direction, VolumeControl* volumeControl) {
 }
 
 - (void)decreaseVolume {
-	if ([[%c(SBMediaController) sharedInstance] isRingerMuted]) {
+	if (isBrightnessMode()) {
 		HBBVSetBrightness(NO, self);
 	} else {
 		%orig;
@@ -63,7 +69,7 @@ void HBBVSetBrightness(BOOL direction, VolumeControl* volumeControl) {
 */
 
 - (void)_changeVolumeBy:(CGFloat)by {
-	if ([[%c(SBMediaController) sharedInstance] isRingerMuted]) {
+	if (isBrightnessMode()) {
 		if (by > 0) {
 			[self increaseVolume];
 		} else {
