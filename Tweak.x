@@ -14,7 +14,7 @@
 @end
 
 BOOL isBrightnessMode () {
-	if([[%c(SBMediaController) sharedInstance] isRingerMuted] && [[%c(SBMediaController) sharedInstance] isPlaying])
+	if([[%c(SBMediaController) sharedInstance] isRingerMuted] && ![[%c(SBMediaController) sharedInstance] isPlaying])
 		return YES;
 	return NO;
 }
